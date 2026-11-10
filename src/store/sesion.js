@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, getAuth, GoogleAuthProvider, signInWithPopup, FacebookAuthProvider, signInAnonymously   } from 'firebase/auth'
 import { crearUsuarioConId, crearUsuarioConGoogle, crearUsuarioConFacebook } from './usuario'
 import router from '../config/router'
+import { loadUserAccess } from '../../packages/platform/src/access.js'
 export const providerG = new GoogleAuthProvider();
 export const logGoogle = () => signInWithPopup(auth, providerG)
   .then(async (result) => {
@@ -36,6 +37,7 @@ export const logFacebook = () => {
     });
 }
 export const usuario = ref({});
+export const voiceAccessEnabled = ref(false)
 export const item = ref({})
 const devolverError = e => {
   let mensajeDeError
@@ -102,30 +104,54 @@ export const resetContraseña = ({email}) => {
 
 }
 
-export const cerrarSesion = () => signOut(auth)
+export const cerrarSesion = async () => {
+  await signOut(auth)
+  usuario.value = {}
+  voiceAccessEnabled.value = false
+  item.value = {}
+}
 
 export const sesion = () => onAuthStateChanged(
     auth,
-    ( user ) => {
-        if( user ) 
-          router.push({name: 'pacientes'})
-        else if( router.currentRoute.value.meta.requiereAuth && !user ) 
-          router.push({name:'landing'})
-        else return
+    async ( user ) => {
+        const rutaActual = router.currentRoute.value
+
+        if (user) {
+          usuario.value = { ...usuario.value, uid: user.uid }
+          try {
+            const access = await loadUserAccess(user.uid)
+            voiceAccessEnabled.value = access.features?.voice === true
+          } catch (cause) {
+            console.error('No fue posible cargar el permiso de voz.', cause)
+            voiceAccessEnabled.value = false
+          }
+          if (!rutaActual.meta.requiereAuth) {
+            router.replace({ name: 'reporte' })
+          }
+          return
+        }
+
+        usuario.value = {}
+        voiceAccessEnabled.value = false
+        if (rutaActual.meta.requiereAuth) {
+          router.replace({ name: 'iniciar-sesion' })
+        }
     }
 )
 
-export const obtenerEstadoDeAutentificacion = ()=> new Promise( resolve =>{
-    const unsub = onAuthStateChanged(
-    auth,
-    ( user ) => {
-        unsub()
-        if(user) {
-            usuario.value.uid=user.uid
-            resolve( true )
-        }
-        else resolve( false )
-    }
-)})
+export const obtenerEstadoDeAutentificacion = async () => {
+  // Firebase expone una promesa específica para esperar la restauración inicial
+  // de la sesión. Reutilizar onAuthStateChanged dentro de cada guardia podía dejar
+  // la navegación pendiente y mostrar una pantalla en blanco al abrir el módulo.
+  if (typeof auth.authStateReady === 'function') {
+    await Promise.race([
+      auth.authStateReady(),
+      new Promise(resolve => setTimeout(resolve, 2500))
+    ])
+  }
+  const currentUser = auth.currentUser
+  if (currentUser) usuario.value.uid = currentUser.uid
+  return Boolean(currentUser)
+}
 
 export const miUsuario = () => auth?.currentUser

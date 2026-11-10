@@ -2,7 +2,7 @@
 import { injectProp } from '@vue/compiler-core';
 import { computed, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { obtenerTodos, registro, updateEstado } from "../../store/paciente";
+import { obtenerTodos, registro, updateEstado, errorPacientes, cargandoPacientes } from "../../store/paciente";
 import { previousPage, nextPage, setList, registro_, search, setListDelete, SetPage } from "../../config/Paginator";
 import { registroodonto, obtenerTodos as obtenerOdontograma } from "../../store/formodontograma";
 import { miUsuario } from "../../store/sesion";
@@ -17,6 +17,7 @@ const pageOptions = ref([5, 10, 15, { value: 100, text: 'Show a lot' }]);
 let itemseleccionado = {};
 const paginatedData = ref([]);
 const showAiAttention = computed(() => isConversationalOdontogramEnabled(miUsuario()?.uid));
+onUnmounted(() => obtenerRegistro?.());
 watch(
     () => registro.value,
     () => {
@@ -82,6 +83,10 @@ function searchData() {
         .d-block.d-md-none
             input#SearchInput.form-control.mb-2.ms-auto(v-on:keyup='searchData(registro)' placeholder="Buscar por nombre o documento" aria-label='Buscar pacientes')
     .div.mb-5
+        .alert.alert-danger(v-if='errorPacientes' role='alert') {{ errorPacientes }}
+        .patients-loading(v-else-if='cargandoPacientes' role='status')
+            .spinner-border.text-primary(aria-hidden='true')
+            span Obteniendo pacientes…
         .card.table-heading.mb-1.d-none.d-md-block
             .row.align-items-center.p-2
                 .col-3.ps-4.d-none.d-md-block Doc. Identidad
@@ -111,7 +116,7 @@ function searchData() {
                         i.bi.bi-person
                     button.btn.ai-action(v-if="showAiAttention" title='Atención con QUIRU AI' aria-label='Atención con QUIRU AI' @click="push({ name: 'atencion-ai', params: { idPaciente: item.id } })")
                         i.bi.bi-stars
-        .empty-state(v-if='paginatedData.length === 0')
+        .empty-state(v-if='!cargandoPacientes && !errorPacientes && paginatedData.length === 0')
             i.bi.bi-people(aria-hidden='true')
             h2 Todavía no tienes pacientes registrados.
             p Registra tu primer paciente para comenzar.
@@ -160,5 +165,13 @@ function searchData() {
         font-size: 1.15rem
     p
         margin-bottom: 1.25rem
+
+.patients-loading
+    display: flex
+    align-items: center
+    justify-content: center
+    gap: .75rem
+    min-height: 180px
+    color: var(--text-secondary)
 </style>
   

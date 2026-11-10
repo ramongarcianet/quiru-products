@@ -9,6 +9,7 @@ import { VerFormato } from "../../store/Canvas";
 import { useRoute, useRouter } from "vue-router";
 import { listaDeDientesCombo, listaDeHallazgos as _Hallazgos } from '../../config/Parametros';
 import vSelect from "vue-select"
+import { voiceAccessEnabled } from '../../store/sesion'
 
 const route = useRoute();
 const listaDiccionario = obtenerTodoDiccionario();
@@ -26,6 +27,11 @@ const _listaDeHallazgos = computed(() => {
 onMounted(() => {
   paginaOdontograma.value = true;
   _tipoOdonto.value = route.params.tipoOdonto;
+})
+
+onUnmounted(() => {
+  paginaOdontograma.value = false;
+  detenerVoz();
 })
 
 watch(
@@ -281,7 +287,7 @@ function onKeyDownSoloLetras(event) {
 
 <template lang="pug">
 
-.voice-control(:hidden="itemodontograma?.estado === '1' ")#destacarMicrofono
+.voice-control(v-if="voiceAccessEnabled" :hidden="itemodontograma?.estado === '1' ")#destacarMicrofono
   MicroButton(:class='{ active: isSpeech }' style='--size: 4.75rem' @click="isSpeech ? detenerVoz() : activarVoz()")
   .voice-copy
     strong {{ isSpeech ? 'Escuchando...' : 'Asistente de voz' }}

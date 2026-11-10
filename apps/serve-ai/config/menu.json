@@ -1,0 +1,185 @@
+{
+  "categories": [
+    { "id": "starters", "name": "Entradas", "order": 1 },
+    { "id": "burgers", "name": "Hamburguesas", "order": 2 },
+    { "id": "mains", "name": "Fondos", "order": 3 },
+    { "id": "sides", "name": "Acompañamientos", "order": 4 },
+    { "id": "drinks", "name": "Bebidas", "order": 5 },
+    { "id": "desserts", "name": "Postres", "order": 6 }
+  ],
+  "products": [
+    {
+      "id": "tequenos",
+      "categoryId": "starters",
+      "name": "Tequeños de queso",
+      "aliases": ["tequeños", "palitos de queso"],
+      "description": "Seis tequeños con salsa de la casa.",
+      "price": 1690,
+      "available": true,
+      "ingredients": [
+        { "id": "cheese", "name": "Queso", "removable": false },
+        { "id": "house-sauce", "name": "Salsa de la casa", "removable": true }
+      ],
+      "allergens": ["gluten", "lácteos"]
+    },
+    {
+      "id": "burger-classic",
+      "categoryId": "burgers",
+      "name": "Hamburguesa clásica",
+      "aliases": ["hamburguesa", "burger clásica", "burger"],
+      "description": "Carne, queso, lechuga, tomate, cebolla y salsa de la casa.",
+      "price": 2290,
+      "available": true,
+      "ingredients": [
+        { "id": "beef", "name": "Carne", "removable": false },
+        { "id": "cheese", "name": "Queso", "removable": true },
+        { "id": "lettuce", "name": "Lechuga", "removable": true },
+        { "id": "tomato", "name": "Tomate", "removable": true },
+        { "id": "onion", "name": "Cebolla", "removable": true },
+        { "id": "house-sauce", "name": "Salsa de la casa", "removable": true }
+      ],
+      "modifierGroups": [
+        {
+          "id": "burger-extras",
+          "name": "Extras",
+          "type": "multiple",
+          "required": false,
+          "maxSelections": 3,
+          "options": [
+            { "id": "extra-cheese", "name": "Queso adicional", "aliases": ["queso extra", "más queso"], "priceDelta": 350, "available": true },
+            { "id": "bacon", "name": "Tocino", "aliases": ["bacon"], "priceDelta": 450, "available": true },
+            { "id": "fried-egg", "name": "Huevo frito", "aliases": ["huevo"], "priceDelta": 300, "available": true }
+          ]
+        }
+      ],
+      "allergens": ["gluten", "lácteos", "huevo"]
+    },
+    {
+      "id": "lomo-saltado",
+      "categoryId": "mains",
+      "name": "Lomo saltado",
+      "aliases": ["lomo", "saltado de lomo"],
+      "description": "Lomo de res, cebolla, tomate, papas fritas y arroz.",
+      "price": 3290,
+      "available": true,
+      "ingredients": [
+        { "id": "beef", "name": "Lomo de res", "removable": false },
+        { "id": "onion", "name": "Cebolla", "removable": true },
+        { "id": "tomato", "name": "Tomate", "removable": true },
+        { "id": "fries", "name": "Papas fritas", "removable": true },
+        { "id": "rice", "name": "Arroz", "removable": true }
+      ],
+      "allergens": ["soya"]
+    },
+    {
+      "id": "fries",
+      "categoryId": "sides",
+      "name": "Papas fritas",
+      "aliases": ["papas", "porción de papas"],
+      "description": "Papas crocantes con sal de la casa.",
+      "price": 1090,
+      "available": true,
+      "ingredients": [{ "id": "potato", "name": "Papa", "removable": false }],
+      "modifierGroups": [
+        {
+          "id": "fries-size",
+          "name": "Tamaño",
+          "type": "single",
+          "required": true,
+          "options": [
+            { "id": "regular", "name": "Regular", "aliases": ["medianas", "normal"], "priceDelta": 0, "available": true, "default": true },
+            { "id": "large", "name": "Grandes", "aliases": ["grande"], "priceDelta": 400, "available": true }
+          ]
+        }
+      ],
+      "allergens": []
+    },
+    {
+      "id": "lemonade",
+      "categoryId": "drinks",
+      "name": "Limonada",
+      "aliases": ["limonada clásica", "limonada natural"],
+      "description": "Limonada natural preparada al momento.",
+      "price": 890,
+      "available": true,
+      "ingredients": [
+        { "id": "lemon", "name": "Limón", "removable": false },
+        { "id": "sugar", "name": "Azúcar", "removable": true }
+      ],
+      "modifierGroups": [
+        {
+          "id": "drink-size",
+          "name": "Tamaño",
+          "type": "single",
+          "required": true,
+          "options": [
+            { "id": "regular", "name": "Regular", "aliases": ["mediana", "normal"], "priceDelta": 0, "available": true, "default": true },
+            { "id": "large", "name": "Grande", "aliases": ["grande"], "priceDelta": 300, "available": true }
+          ]
+        }
+      ],
+      "allergens": []
+    },
+    {
+      "id": "inca-kola",
+      "categoryId": "drinks",
+      "name": "Inca Kola",
+      "aliases": ["inca", "inca cola"],
+      "description": "Bebida gaseosa.",
+      "price": 700,
+      "available": true,
+      "ingredients": [],
+      "modifierGroups": [
+        {
+          "id": "soda-size",
+          "name": "Tamaño",
+          "type": "single",
+          "required": true,
+          "options": [
+            { "id": "personal", "name": "Personal", "aliases": ["pequeña"], "priceDelta": 0, "available": true, "default": true },
+            { "id": "liter", "name": "Un litro", "aliases": ["1 litro", "grande"], "priceDelta": 700, "available": true }
+          ]
+        }
+      ],
+      "allergens": []
+    },
+    {
+      "id": "coca-cola",
+      "categoryId": "drinks",
+      "name": "Coca-Cola",
+      "aliases": ["coca cola", "coca"],
+      "description": "Bebida gaseosa.",
+      "price": 700,
+      "available": true,
+      "ingredients": [],
+      "modifierGroups": [
+        {
+          "id": "soda-size",
+          "name": "Tamaño",
+          "type": "single",
+          "required": true,
+          "options": [
+            { "id": "personal", "name": "Personal", "aliases": ["pequeña"], "priceDelta": 0, "available": true, "default": true },
+            { "id": "liter", "name": "Un litro", "aliases": ["1 litro", "grande"], "priceDelta": 700, "available": true }
+          ]
+        }
+      ],
+      "allergens": []
+    },
+    {
+      "id": "brownie",
+      "categoryId": "desserts",
+      "name": "Brownie con helado",
+      "aliases": ["brownie", "brownie de chocolate"],
+      "description": "Brownie tibio con helado de vainilla.",
+      "price": 1290,
+      "available": false,
+      "ingredients": [],
+      "allergens": ["gluten", "lácteos", "huevo"]
+    }
+  ],
+  "upsellRules": [
+    { "triggerProductId": "burger-classic", "suggestProductId": "fries" },
+    { "triggerProductId": "lomo-saltado", "suggestProductId": "lemonade" }
+  ]
+}

@@ -1,11 +1,12 @@
 import { computed, ref } from 'vue'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import {
   GoogleAIBackend,
   getAI,
   getGenerativeModel
 } from 'firebase/ai'
 import { getToken as getAppCheckToken } from 'firebase/app-check'
-import { app, appCheck } from '../config/firebase'
+import { app, appCheck, firestore } from '../config/firebase'
 import {
   QUIRU_APPOINTMENT_TOOLS,
   QUIRU_TEXT_MODEL,
@@ -110,6 +111,27 @@ function getAuthorizedPatient(patientId) {
   ))
 }
 
+async function findAuthorizedPatients(searchText) {
+  const uid = currentUserId()
+  const localMatches = searchAuthorizedPatients(patients.value, searchText, uid)
+  if (localMatches.length) return localMatches
+
+  // Respaldo para el caso en que el snapshot de pacientes aún no terminó de cargar.
+  const snapshot = await getDocs(query(
+    collection(firestore, 'paciente'),
+    where('idOdontologo', '==', uid),
+    where('estado', '==', true)
+  ))
+  const freshPatients = snapshot.docs.map(patientDoc => ({
+    ...patientDoc.data(),
+    id: patientDoc.id
+  }))
+  freshPatients.forEach(patient => {
+    if (!patients.value.some(existing => existing.id === patient.id)) patients.value.push(patient)
+  })
+  return searchAuthorizedPatients(freshPatients, searchText, uid)
+}
+
 function prepareAppointment(args) {
   const patient = getAuthorizedPatient(args?.pacienteId)
   const draft = buildVoiceAppointmentDraft(args, patient, doctor.value, timeZone())
@@ -190,7 +212,7 @@ async function handleFunctionCalls(functionCalls) {
     }
 
     if (call.name === 'buscar_paciente') {
-      const found = searchAuthorizedPatients(patients.value, call.args?.consulta, currentUserId())
+      const found = await findAuthorizedPatients(call.args?.consulta)
       voicePatientMatches.value = found
       voiceAppointmentState.value = 'listening'
       return functionResponse(call, { encontrados: found })
@@ -244,6 +266,11 @@ function createRecognition() {
   recognition.continuous = false
   recognition.interimResults = false
   recognition.maxAlternatives = 3
+  recognition.onstart = () => {
+    if (!conversationActive) return
+    voiceAppointmentError.value = ''
+    if (!voiceAppointmentDraft.value) voiceAppointmentState.value = 'listening'
+  }
   recognition.onresult = event => {
     const result = event.results?.[event.results.length - 1]
     const alternatives = result ? Array.from(result) : []
@@ -431,7 +458,7 @@ export async function startVoiceAppointmentConversation() {
     await navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       stream.getTracks().forEach(track => track.stop())
     })
-    await speakAndContinue('Hola, soy QUIRU. Dime para quién deseas registrar la cita.')
+    await speakAndContinue('Hola, soy QUIRU. El micrófono está activo; dime para quién deseas registrar la cita.')
   } catch (error) {
     console.error('[QUIRU] No se pudo iniciar el asistente de citas:', error)
     voiceAppointmentError.value = safeErrorMessage(error)

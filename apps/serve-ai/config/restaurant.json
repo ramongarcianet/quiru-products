@@ -1,0 +1,15 @@
+{
+  "id": "sabor-lima",
+  "name": "Sabor Lima",
+  "description": "Cocina peruana contemporánea atendida por QUIRU Serve AI.",
+  "currency": "PEN",
+  "locale": "es-PE",
+  "timezone": "America/Lima",
+  "orderingMode": "TABLE",
+  "active": true,
+  "branding": {
+    "primaryColor": "#063f67",
+    "accentColor": "#00c7d9",
+    "logo": ""
+  }
+}

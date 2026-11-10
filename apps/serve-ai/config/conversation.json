@@ -1,0 +1,9 @@
+{
+  "assistantName": "QUIRU",
+  "language": "es-PE",
+  "welcomeMessage": "Hola. ¿Qué te gustaría pedir?",
+  "maxSessionMinutes": 10,
+  "inactivityTimeoutSeconds": 90,
+  "maxUpsellsPerOrder": 1,
+  "responseStyle": "short"
+}

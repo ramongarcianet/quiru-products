@@ -1,0 +1,7 @@
+{
+  "tagline": "Habla. Pide. Disfruta.",
+  "showAllergens": true,
+  "cartStorageKey": "quiru-serve-cart-v1",
+  "defaultCategory": "burgers",
+  "telemetryEnabled": true
+}

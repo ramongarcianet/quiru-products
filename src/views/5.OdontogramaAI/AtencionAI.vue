@@ -10,7 +10,8 @@ import { TOOTH_SURFACES, VALID_FDI_TEETH } from '../../domain/nts188/NTS188Rules
 import { quiruLiveErrorMessage, startQuiruOdontogramLive } from '../../services/quiruOdontogramLive'
 import { useConversationalOdontogram } from '../../stores/useConversationalOdontogram'
 import { item as patient, leer as readPatient } from '../../store/paciente'
-import { miUsuario } from '../../store/sesion'
+import { miUsuario, voiceAccessEnabled } from '../../store/sesion'
+import { detenerVoz } from '../../store/odontograma'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,6 +34,7 @@ const absenceReason = ref('')
 const selectedCode = ref('')
 const selectedCondition = ref('GOOD')
 const secondTooth = ref('')
+const returningToPatients = ref(false)
 
 const session = useConversationalOdontogram({ patientId, userId })
 const patientName = computed(() => [patient.value?.nombre, patient.value?.apellidoPaterno, patient.value?.apellidoMaterno].filter(Boolean).join(' '))
@@ -148,6 +150,8 @@ async function startVoice() {
   }
   voiceError.value = ''
   try {
+    // Garantiza que el reconocedor heredado de Odontograma no conserve el micrófono.
+    detenerVoz()
     session.record('ai')
     liveController.value = await startQuiruOdontogramLive({
       onState: (state, reason) => {
@@ -163,6 +167,15 @@ async function startVoice() {
       onToolCall: () => session.record('tool'),
       onVoiceTurn: () => session.record('voice'),
       onAiRequest: () => session.record('ai'),
+      onSoundStart: () => {
+        session.assistantMessage.value = 'Te escucho…'
+      },
+      onInterimTranscript: transcript => {
+        session.assistantMessage.value = `Escuchando: “${transcript}”…`
+      },
+      onTranscript: transcript => {
+        session.assistantMessage.value = `Te escuché: “${transcript}”. Procesando…`
+      },
       onError: message => {
         voiceError.value = message
         session.assistantMessage.value = `${message} Puedes continuar manualmente.`
@@ -178,7 +191,7 @@ async function startVoice() {
         return result
       }
     })
-    session.assistantMessage.value = 'Estoy lista. Puedes comenzar.'
+    session.assistantMessage.value = 'Micrófono activo. Habla ahora.'
   } catch (error) {
     voiceError.value = quiruLiveErrorMessage(error)
     voiceState.value = 'error'
@@ -226,6 +239,16 @@ function generateNewDiagnosis() {
   const result = session.beginNewDiagnosis()
   if (result.success) summary.value = null
 }
+
+function returnToPatients() {
+  if (returningToPatients.value) return
+  returningToPatients.value = true
+  const target = router.resolve({ name: 'pacientes' })
+  void stopVoice('return-to-patients').catch(error => {
+    console.error('No se pudo detener la voz al salir de la atención.', error)
+  })
+  window.location.assign(target.href)
+}
 </script>
 
 <template lang="pug">
@@ -234,15 +257,15 @@ function generateNewDiagnosis() {
   .state-card(v-else-if="!enabled")
     h1 Atención con QUIRU AI no habilitada
     p Esta función experimental no está habilitada para tu usuario.
-    button.btn.btn-outline-primary(type="button" @click="router.push({ name: 'pacientes' })") Volver a pacientes
+    button.btn.btn-outline-primary(type="button" :disabled='returningToPatients' @click='returnToPatients') Volver a pacientes
   .state-card(v-else-if="loadError" role="alert")
     h1 No se pudo cargar la atención
     p {{ loadError }}
-    button.btn.btn-outline-primary(type="button" @click="router.push({ name: 'pacientes' })") Volver a pacientes
+    button.btn.btn-outline-primary(type="button" :disabled='returningToPatients' @click='returnToPatients') Volver a pacientes
   .state-card(v-else-if="!authorized")
     h1 No se puede abrir este paciente
     p No tienes permisos para acceder a esta atención.
-    button.btn.btn-outline-primary(type="button" @click="router.push({ name: 'pacientes' })") Volver a pacientes
+    button.btn.btn-outline-primary(type="button" :disabled='returningToPatients' @click='returnToPatients') Volver a pacientes
   template(v-else)
     header.patient-header
       div
@@ -252,7 +275,7 @@ function generateNewDiagnosis() {
           strong {{ patientName }}
           span(v-if="patientAge !== null")  · {{ patientAge }} años
           span  · {{ patient.tipoDocumento }} {{ patient.numeroDocumento }}
-      button.btn.btn-outline-secondary(type="button" @click="router.push({ name: 'pacientes' })")
+      button.btn.btn-outline-secondary(type="button" :disabled='returningToPatients' @click='returnToPatients')
         i.bi.bi-arrow-left.me-2
         | Pacientes
 
@@ -346,20 +369,20 @@ function generateNewDiagnosis() {
           span.sparkle ✦
           div
             h2 QUIRU AI
-            span(:class="`voice-${voiceState}`") {{ voiceState === 'listening' ? 'Escuchando' : voiceState === 'connecting' ? 'Conectando' : 'Disponible' }}
+            span(v-if="voiceAccessEnabled" :class="`voice-${voiceState}`") {{ voiceState === 'listening' ? 'Escuchando' : voiceState === 'connecting' ? 'Conectando' : 'Disponible' }}
         p.assistant-message {{ session.assistantMessage.value }}
-        p.alert.alert-danger.py-2(v-if="session.error.value || voiceError" role="alert") {{ session.error.value || voiceError }}
+        p.alert.alert-danger.py-2(v-if="session.error.value || (voiceAccessEnabled && voiceError)" role="alert") {{ session.error.value || voiceError }}
 
-        .read-only-voice(v-if="session.isDiagnosisReadOnly.value")
+        .read-only-voice(v-if="voiceAccessEnabled && session.isDiagnosisReadOnly.value")
           i.bi.bi-lock-fill.me-2
           | Registro finalizado · solo lectura
-        .voice-start(v-else-if="voiceState !== 'listening' && voiceState !== 'connecting'")
+        .voice-start(v-else-if="voiceAccessEnabled && voiceState !== 'listening' && voiceState !== 'connecting'")
           p Puedes registrar hallazgos utilizando voz o interactuando directamente con el odontograma.
           button.btn.btn-primary.w-100(type="button" @click="startVoice")
             i.bi.bi-mic-fill.me-2
             | Iniciar asistencia por voz
           small Continuar manualmente siempre está disponible.
-        button.btn.btn-outline-primary.w-100(v-else type="button" @click="stopVoice('user')")
+        button.btn.btn-outline-primary.w-100(v-else-if="voiceAccessEnabled" type="button" @click="stopVoice('user')")
           i.bi.bi-pause-fill.me-2
           | Pausar voz
 

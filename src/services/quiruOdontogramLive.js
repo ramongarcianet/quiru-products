@@ -144,7 +144,7 @@ export async function startQuiruOdontogramLive(callbacks) {
   const recognition = new SpeechRecognition()
   recognition.lang = 'es-PE'
   recognition.continuous = false
-  recognition.interimResults = false
+  recognition.interimResults = true
   recognition.maxAlternatives = 1
 
   let active = true
@@ -152,6 +152,7 @@ export async function startQuiruOdontogramLive(callbacks) {
   let stopped = false
   let inactivityTimer
   let maximumTimer
+  let restartTimer
   let inactivityWarningSent = false
   let retries = 0
   let pendingClarification = null
@@ -160,12 +161,30 @@ export async function startQuiruOdontogramLive(callbacks) {
     chatSession = model.startChat()
   }
 
+  const scheduleListening = (delay = 350) => {
+    clearTimeout(restartTimer)
+    if (!active || processing || stopped) return
+    restartTimer = setTimeout(() => startListening(), delay)
+  }
+
   const startListening = () => {
     if (!active || processing || stopped) return
     try { recognition.start() } catch (error) {
-      if (!String(error?.message || '').toLowerCase().includes('already')) throw error
+      if (String(error?.message || '').toLowerCase().includes('already')) {
+        scheduleListening()
+        return
+      }
+      throw error
     }
   }
+
+  recognition.onstart = () => {
+    if (!active || stopped) return
+    processing = false
+    callbacks.onState?.('listening')
+  }
+  recognition.onsoundstart = () => callbacks.onSoundStart?.()
+  recognition.onspeechstart = () => callbacks.onSoundStart?.()
 
   const stop = async reason => {
     if (stopped) return
@@ -173,6 +192,7 @@ export async function startQuiruOdontogramLive(callbacks) {
     active = false
     clearTimeout(inactivityTimer)
     clearTimeout(maximumTimer)
+    clearTimeout(restartTimer)
     try { recognition.abort() } catch (error) {}
     window.speechSynthesis?.cancel()
     callbacks.onState?.('idle', reason)
@@ -339,35 +359,49 @@ export async function startQuiruOdontogramLive(callbacks) {
   }
 
   recognition.onresult = event => {
-    const result = event.results?.[event.results.length - 1]
-    if (!result?.isFinal) return
-    const transcript = result?.[0]?.transcript?.trim()
-    if (transcript) processTurn(transcript)
+    let finalTranscript = ''
+    let interimTranscript = ''
+    for (let index = event.resultIndex || 0; index < event.results.length; index += 1) {
+      const result = event.results[index]
+      const text = result?.[0]?.transcript?.trim() || ''
+      if (!text) continue
+      if (result.isFinal) finalTranscript += `${text} `
+      else interimTranscript += `${text} `
+    }
+    if (interimTranscript.trim()) callbacks.onInterimTranscript?.(interimTranscript.trim())
+    if (finalTranscript.trim()) {
+      const transcript = finalTranscript.trim()
+      callbacks.onTranscript?.(transcript)
+      processTurn(transcript)
+    }
   }
   recognition.onerror = event => {
     if (!active || event.error === 'aborted') return
     if (event.error === 'no-speech') {
       processing = false
-      startListening()
+      scheduleListening()
       return
     }
     callbacks.onError?.(safeError({ code: event.error, name: event.error }))
     stop('error')
   }
   recognition.onend = () => {
-    if (active && !processing && !window.speechSynthesis?.speaking) startListening()
+    if (active && !processing && !window.speechSynthesis?.speaking) scheduleListening()
   }
 
   callbacks.onState?.('requesting_permission')
   await navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     stream.getTracks().forEach(track => track.stop())
   })
+  // Da tiempo al navegador para liberar la pista de validación antes de que
+  // SpeechRecognition adquiera el mismo dispositivo.
+  await new Promise(resolve => setTimeout(resolve, 150))
   callbacks.onState?.('connecting')
   armInactivity()
   maximumTimer = setTimeout(() => stop('maximum-duration'), CONVERSATIONAL_ODONTOGRAM_CONFIG.maxSessionMinutes * 60 * 1000)
   callbacks.onState?.('listening')
   processing = true
-  await speakAndListen('Estoy lista. Puedes comenzar.')
+  await speakAndListen('Hola, soy QUIRU. El micrófono está activo; puedes comenzar.')
 
   return { stop }
 }

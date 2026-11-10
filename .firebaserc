@@ -19,6 +19,12 @@
         ],
         "cl-quiru": [
           "cl-quiru"
+        ],
+        "smart-agenda": [
+          "quiru-agenda"
+        ],
+        "administration": [
+          "quiru-admin"
         ]
       }
     }

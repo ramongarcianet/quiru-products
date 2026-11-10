@@ -1,14 +1,14 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import Modal from 'bootstrap/js/dist/modal'
 import { item, leer, registro, leerEnRegistro, actualizar } from '../store/usuario'
 import { cerrarSesion, miUsuario } from '../store/sesion'
 
 const { push } = useRouter()
 const modalElement = ref()
-const dropdownButton = ref()
+const cerrandoSesion = ref(false)
 let modalInstance
-let dropdownInstance
 const opinionDefaults = {
   recomendacion: "",
   tuvoError: "",
@@ -44,16 +44,12 @@ onMounted(() => {
   asegurarCamposOpinion()
 
   if (modalElement.value) {
-    modalInstance = new bootstrap.Modal(modalElement.value)
-  }
-  if (dropdownButton.value) {
-    dropdownInstance = new bootstrap.Dropdown(dropdownButton.value)
+    modalInstance = new Modal(modalElement.value)
   }
 })
 
 onBeforeUnmount(() => {
   modalInstance?.dispose?.()
-  dropdownInstance?.dispose?.()
 })
 
 watch(
@@ -85,23 +81,18 @@ const abrirOpinion = () => {
   modalInstance?.show()
 }
 
-const toggleSesionMenu = () => {
-  dropdownInstance?.toggle()
-}
+const salirSesion = async () => {
+  if (cerrandoSesion.value) return
 
-const cerrarSesionMenu = () => {
-  dropdownInstance?.hide()
-}
-
-const irAConfiguracion = () => {
-  cerrarSesionMenu()
-  push({ name: 'usuario' })
-}
-
-const salirSesion = () => {
-  cerrarSesionMenu()
-  cerrarSesion()
-  adios()
+  cerrandoSesion.value = true
+  try {
+    await cerrarSesion()
+    await push({ name: 'iniciar-sesion' })
+  } catch (error) {
+    console.error('No fue posible cerrar la sesión', error)
+  } finally {
+    cerrandoSesion.value = false
+  }
 }
 </script>
 
@@ -157,80 +148,42 @@ teleport(to='body')
               button.btn.btn-secondary(type='button' @click='cerrar()') Cerrar
               button.btn.btn-primary(type='submit') Enviar
 
-.dropdown
-  .row.perfil
-    .cuadro
-      .comentario.mx-2
-        button.btn.btn-outline-primary.d-none.d-md-block(type='button' @click='abrirOpinion()')
-          i.bi.bi-emoji-smile.me-1
-          | Déjanos tu opinión
-      button.avatar(type='button' ref='dropdownButton' @click='toggleSesionMenu()' aria-label='Abrir menú de perfil' aria-haspopup='true')
-        i.bi.bi-person-circle.session-icon
-      ul.dropdown-menu.dropdown-menu-end
-        li
-          button.dropdown-item(type='button' @click='irAConfiguracion()')
-            i.bi.bi-gear(style="color: var(--color-primary)")
-            |  Configuración
-        li
-          button.dropdown-item(type='button' @click='salirSesion()')
-            i.bi.bi-box-arrow-right(style="color: var(--color-primary)")
-            |  Salir
-  .row.sugerenciaMovil
-    .col-6
-    .col-6.d-flex.justify-content-end
-      button.btn.btn-outline-primary.d-block.d-md-none(type='button' @click='abrirOpinion()')
-        i.bi.bi-emoji-smile.me-1
-        | Sugerencias
+.session-actions
+  button.header-action.feedback-action(type='button' @click='abrirOpinion()')
+    i.bi.bi-emoji-smile
+    span.d-none.d-md-inline Opinión
+  button.header-action(type='button' :disabled='cerrandoSesion' @click='salirSesion()')
+    i.bi.bi-box-arrow-right
+    span {{ cerrandoSesion ? 'Cerrando…' : 'Salir' }}
 </template>
 
 <style lang="sass" scoped>
-.puerta
+.session-actions
   display: flex
-  flex-direction: row
-  justify-content: end
-  padding: 10px 20px
+  align-items: center
+  justify-content: flex-end
+  gap: .55rem
 
-.sugerenciaMovil
-  margin-top: -30px
-  padding: 0px
+.header-action
+  display: inline-flex
+  align-items: center
+  gap: .45rem
+  min-height: 40px
+  padding: .55rem .85rem
+  border: 1px solid rgba(255,255,255,.24)
+  border-radius: 10px
+  color: white
+  background: rgba(255,255,255,.08)
+  font-weight: 700
+  &:hover
+    background: rgba(255,255,255,.16)
+  &:disabled
+    opacity: .65
 
-.perfil
-  width: 100%
-  height: auto
-  margin-top: 0
-  margin-left: 0px
-  margin-right: 0px
-  margin-bottom: 0px
-  padding: 0px
-  .cuadro
-    display: flex
-    flex-direction: row
-    justify-content: end
-    align-items: center
-    min-height: 3rem
-    .avatar
-      border: none
-      display: flex
-      flex-direction: column
-      justify-content: center
-      align-items: center
-      width: 44px
-      height: 44px
-      border-radius: 60px
-      background: var(--gradient-brand)
-      box-shadow: 0 8px 18px rgba(var(--color-primary-rgb), 0.2)
-      cursor: pointer
-      .session-icon
-        font-size: 1.7rem
-        color: white
-
-.dropdown-menu
-  padding: 0.45rem
-  border-color: var(--color-border)
-  .dropdown-item
-    display: flex
-    align-items: center
-    gap: 0.55rem
-    padding: 0.65rem 0.75rem
-    border-radius: 0.65rem
+@media (max-width: 575px)
+  .header-action
+    padding-inline: .65rem
+  .feedback-action
+    width: 40px
+    justify-content: center
 </style>

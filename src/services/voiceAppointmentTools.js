@@ -36,18 +36,38 @@ export function patientFullName(patient = {}) {
 export function searchAuthorizedPatients(patients, query, userId) {
   const normalizedQuery = normalizePatientSearch(query)
   if (!normalizedQuery || !userId) return []
-  const queryTokens = normalizedQuery.split(' ')
+  const digitGroups = normalizedQuery.match(/\d+/g) || []
+  const documentCandidates = [
+    ...digitGroups,
+    digitGroups.join('')
+  ].filter((value, index, values) => value.length >= 6 && values.indexOf(value) === index)
+  const ignoredWords = new Set([
+    'agenda', 'agendar', 'cita', 'crear', 'genera', 'generar', 'para', 'con',
+    'dni', 'documento', 'identidad', 'numero', 'paciente', 'al', 'a', 'el', 'la'
+  ])
+  const nameTokens = normalizedQuery
+    .split(' ')
+    .filter(token => !/^\d+$/.test(token) && !ignoredWords.has(token))
 
   return (patients || [])
     .filter(patient => patient?.estado !== false && patient?.idOdontologo === userId)
     .filter(patient => {
-      const documentNumber = normalizePatientSearch(patient.numeroDocumento)
-      if (/^\d+$/.test(normalizedQuery)) return documentNumber === normalizedQuery
+      const documentNumber = normalizePatientSearch(patient.numeroDocumento).replace(/\s/g, '')
+      const documentMatches = documentCandidates.length === 0 || documentCandidates.includes(documentNumber)
       const name = normalizePatientSearch(patientFullName(patient))
-      return queryTokens.every(token => name.includes(token))
+      // Un documento completo es más preciso que las palabras accesorias que
+      // SpeechRecognition pueda conservar alrededor del nombre.
+      const nameMatches = documentCandidates.length > 0 ||
+        nameTokens.length === 0 || nameTokens.every(token => name.includes(token))
+      return documentMatches && nameMatches
     })
     .slice(0, 5)
-    .map(patient => ({ id: patient.id, nombreCompleto: patientFullName(patient) }))
+    .map(patient => ({
+      id: patient.id,
+      nombreCompleto: patientFullName(patient),
+      tipoDocumento: patient.tipoDocumento || '',
+      numeroDocumento: String(patient.numeroDocumento || '')
+    }))
 }
 
 function parseLocalDateTime(dateValue, timeValue) {

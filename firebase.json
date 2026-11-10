@@ -1,12 +1,27 @@
 {
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
   "hosting": [
     {
       "target": "app",
-      "public": "dist",
+      "public": "dist/dentistry",
       "ignore": [
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "same-origin-allow-popups"
+            }
+          ]
+        }
       ],
       "rewrites": [
         {
@@ -16,8 +31,32 @@
       ]
     },
     {
+      "target": "portal",
+      "public": "dist/portal",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
+      "target": "administration",
+      "public": "dist/administration",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
+      "target": "smart-agenda",
+      "public": "dist/smart-agenda",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
+      "target": "serve-ai",
+      "public": "dist/serve-ai",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
       "target": "test",
-      "public": "dist",
+      "public": "dist/dentistry",
       "ignore": [
         "firebase.json",
         "**/.*",
@@ -32,7 +71,7 @@
     },
     {
       "target": "dev",
-      "public": "dist",
+      "public": "dist/dentistry",
       "ignore": [
         "firebase.json",
         "**/.*",
@@ -47,7 +86,7 @@
     },
     {
       "target": "app-quiru",
-      "public": "dist",
+      "public": "dist/dentistry",
       "ignore": [
         "firebase.json",
         "**/.*",
@@ -62,7 +101,7 @@
     },
     {
       "target": "cl-quiru",
-      "public": "dist",
+      "public": "dist/dentistry",
       "ignore": [
         "firebase.json",
         "**/.*",

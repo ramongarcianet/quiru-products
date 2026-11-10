@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { addDoc, collection, onSnapshot, getDoc, doc, updateDoc, deleteDoc, orderBy, query, where, getDocs } from 'firebase/firestore'
 import { firestore } from '../config/firebase'
 import { usuario } from '../store/sesion'
@@ -69,19 +69,46 @@ const eliminar = (id) => {
 
 const registro = ref([])
 const verEliminados = ref(false)
+export const errorPacientes = ref('')
+export const cargandoPacientes = ref(true)
 export const registroPacienteTodo = ref([])
 
 const obtenerTodos = () => {
-    const referencia = collection(firestore, 'paciente')
-    const referenciaOrden = !verEliminados.value
-        ? query(referencia, where('idOdontologo', '==', usuario.value.uid), where('estado', '==', true))
-        : query(referencia, where('idOdontologo', '==', usuario.value.uid), orderBy("fechaIngreso", "desc"))
-    return onSnapshot(
-        referenciaOrden,
-        collection => {
-            registro.value = collection.docs.map(doc => ({ ...doc.data(), id: doc.id }))
-        }
+    let detenerSnapshot = () => {}
+    const detenerObservador = watch(
+        [() => usuario.value.uid, () => verEliminados.value],
+        ([uid, mostrarEliminados]) => {
+            detenerSnapshot()
+            registro.value = []
+            errorPacientes.value = ''
+            cargandoPacientes.value = true
+            if (!uid) return
+
+            const referencia = collection(firestore, 'paciente')
+            const referenciaOrden = !mostrarEliminados
+                ? query(referencia, where('idOdontologo', '==', uid), where('estado', '==', true))
+                : query(referencia, where('idOdontologo', '==', uid), orderBy('fechaIngreso', 'desc'))
+
+            detenerSnapshot = onSnapshot(
+                referenciaOrden,
+                collection => {
+                    registro.value = collection.docs.map(documento => ({ ...documento.data(), id: documento.id }))
+                    cargandoPacientes.value = false
+                },
+                cause => {
+                    console.error('No fue posible obtener los pacientes.', cause)
+                    errorPacientes.value = 'No fue posible obtener los pacientes. Actualiza la página o revisa tus permisos.'
+                    cargandoPacientes.value = false
+                }
+            )
+        },
+        { immediate: true }
     )
+
+    return () => {
+        detenerObservador()
+        detenerSnapshot()
+    }
 }
 const obtenerTodosDni = () => {
     const referencia = collection(firestore, 'paciente')

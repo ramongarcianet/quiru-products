@@ -1,0 +1,33 @@
+.users-list { display: grid; gap: 18px; margin-top: 22px; }
+.user-card { padding: 22px; background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 8px 24px rgba(7,27,64,.05); }
+.user-card.changed { border-color: #8db9ff; box-shadow: 0 8px 24px rgba(0,102,255,.1); }
+.page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.admin-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0; }
+.admin-metrics article { display: grid; padding: 18px; border: 1px solid #e2e8f0; border-radius: 15px; background: white; }
+.admin-metrics strong { color: #5530d8; font-size: 28px; }.admin-metrics span { color: #52657f; font-size: 13px; }
+.admin-metrics .metric-warning strong { color: #b56700; }
+.view-tabs { display: flex; gap: 8px; margin: 22px 0 12px; overflow-x: auto; }.view-tabs button { padding: 11px 15px; border: 1px solid #d9e1ec; border-radius: 11px; background: white; color: #52657f; font-weight: 800; cursor: pointer; white-space: nowrap; }.view-tabs button.active { border-color: #0066ff; color: #0066ff; background: #eaf2ff; }
+.filters { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; padding: 18px; }
+.filters label { display: grid; gap: 7px; font-weight: 750; }
+.auth-filter { align-items: end; }.auth-filter p { margin: 0 0 11px; color: #52657f; }
+.auth-users-list { display: grid; gap: 12px; margin-top: 18px; }.auth-user-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 20px; border: 1px solid #e2e8f0; border-radius: 15px; background: white; }.auth-user-card p { margin: 3px 0; color: #52657f; }.auth-user-card small { color: #7b8ba1; overflow-wrap: anywhere; }.auth-user-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }.success-badge, .disabled-badge { padding: 7px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; }.success-badge { color: #087443; background: #e5f8ed; }.disabled-badge { color: #9b2c2c; background: #fff0f0; }
+.loading-state, .empty-state { padding: 32px; text-align: center; color: #52657f; }
+.empty-state { border: 1px dashed #cbd5e1; border-radius: 16px; }.empty-state p { margin: 5px 0 0; }
+.user-heading, .save-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.user-heading h2 { margin-bottom: 5px; font-size: 19px; }
+.user-heading p { margin-bottom: 0; }
+.user-uid { display: block; margin-top: 5px; color: #7b8ba1; overflow-wrap: anywhere; }
+.uid-correction { display: block; margin-top: 6px; padding: 6px 9px; border-radius: 8px; color: #875500; background: #fff7df; font-weight: 700; overflow-wrap: anywhere; }
+.role { padding: 6px 10px; border-radius: 999px; background: #f0ebff; color: #5530d8; font-size: 12px; font-weight: 800; }
+.badges, .card-actions { display: flex; align-items: center; gap: 8px; }.scope { padding: 6px 10px; border-radius: 999px; background: #eaf2ff; color: #0066ff; font-size: 12px; font-weight: 800; }
+.pending { color: #9a5b00; font-weight: 750; }
+fieldset { margin: 20px 0; padding: 0; border: 0; }
+legend { margin-bottom: 10px; font-weight: 800; }
+.scope-note { margin-bottom: 10px; font-size: 13px; }
+.module-toggle { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid #edf1f6; }
+.module-toggle input { width: 20px; height: 20px; accent-color: #0066ff; }
+.module-toggle span { display: grid; gap: 3px; }
+.module-toggle small { color: #52657f; }
+.serve-assignment { display: grid; gap: 7px; margin-top: 12px; max-width: 520px; font-weight: 700; }.serve-assignment small { color: #52657f; font-weight: 400; }
+@media (max-width: 850px) { .admin-metrics { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .page-heading, .user-heading, .save-row, .auth-user-card { align-items: flex-start; flex-direction: column; }.filters, .admin-metrics { grid-template-columns: 1fr; }.card-actions, .auth-user-actions { width: 100%; flex-wrap: wrap; justify-content: flex-start; }.card-actions .button { flex: 1; } }

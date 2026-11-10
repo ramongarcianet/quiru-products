@@ -1,11 +1,39 @@
 <script setup>
 import { alertMensaje } from "../store/helper";
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import Nav from "../components/Nav.vue";
 import Avatar from "../components/Avatar.vue";
 import BrandLogo from "../components/BrandLogo.vue";
+import { item } from '../store/usuario'
 
 const verDialog = ref(false);
+const profile = computed(() => {
+  const value = item?.value
+  return value && typeof value === 'object' ? value : {}
+})
+const logoLoadFailed = ref(false)
+const logoUrl = computed(() => profile.value?.linkLogo || '')
+const consultationName = computed(() => profile.value?.nombreconsultorio || 'Mi consultorio')
+const normalizeName = value => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .replace(/\s+/g, ' ')
+  .toLocaleLowerCase('es')
+
+const userFullName = computed(() => {
+  const name = String(profile.value?.nombre || '').trim().replace(/\s+/g, ' ')
+  const normalizedName = ` ${normalizeName(name)} `
+  const missingSurnames = [profile.value?.apellidoPaterno, profile.value?.apellidoMaterno]
+    .map(value => String(value || '').trim().replace(/\s+/g, ' '))
+    .filter(value => value && !normalizedName.includes(` ${normalizeName(value)} `))
+
+  return [name, ...missingSurnames].filter(Boolean).join(' ') || 'Usuario'
+})
+
+watch(logoUrl, () => {
+  logoLoadFailed.value = false
+})
 
 watch(
   () => alertMensaje.value,
@@ -25,17 +53,26 @@ Dialog(v-model='verDialog')
 .dashboard-page
   .dashboard-glow.dashboard-glow-a
   .dashboard-glow.dashboard-glow-b
-  .container.py-3.py-md-4
-    .dashboard-shell
-      header.dashboard-hero
+  header.product-header
+    .header-inner
+      .header-identities
         .brand-block
-          BrandLogo
-        .hero-side
-          Avatar
+          BrandLogo(inverse)
+        .identity-separator(aria-hidden='true')
+        .account-lockup
+          span.account-mark(:class='{ empty: !logoUrl || logoLoadFailed }' aria-hidden='true')
+            img(v-if='logoUrl && !logoLoadFailed' :src='logoUrl' alt='' @error='logoLoadFailed = true')
+          span.account-title
+            strong {{ consultationName }}
+            span {{ userFullName }}
+      .hero-side
+        Avatar
+  Nav
+  .workspace-content
+    .dashboard-shell
       #body
         .content-card
           router-view(:key="$route.name === 'atencion-ai' ? $route.fullPath : undefined")
-  Nav
 </template>
 
 <style lang="sass" scoped>
@@ -43,7 +80,6 @@ Dialog(v-model='verDialog')
   min-height: 100vh
   position: relative
   isolation: isolate
-  padding-bottom: 6.5rem
   overflow-x: hidden
 
 .dashboard-glow
@@ -70,27 +106,92 @@ Dialog(v-model='verDialog')
   position: relative
   z-index: 1
 
-.dashboard-hero
+.product-header
+  position: relative
+  z-index: 2
+  color: white
+  background: var(--brand-navy)
+
+.header-inner
+  width: min(1240px, calc(100% - 36px))
+  min-height: 76px
+  margin: 0 auto
   display: flex
   align-items: center
   justify-content: space-between
-  gap: 1rem
-  min-height: 72px
-  margin-bottom: 1rem
-  padding: 0.7rem 1rem
-  border-radius: var(--radius-card)
-  background: rgba(255,255,255,0.96)
-  border: 1px solid var(--color-border)
-  box-shadow: var(--shadow-soft)
+  gap: 1.25rem
+  padding: .8rem 0
+
+.header-identities
+  display: flex
+  align-items: center
+  min-width: 0
+  gap: 1.25rem
 
 .brand-block
   display: flex
   align-items: center
+  flex: 0 0 auto
+
+.identity-separator
+  width: 1px
+  height: 2.25rem
+  flex: 0 0 auto
+  background: rgba(255, 255, 255, 0.18)
 
 .hero-side
   display: flex
-  flex-direction: column
   align-items: flex-end
+
+.account-lockup
+  display: inline-flex
+  align-items: center
+  min-width: 0
+  gap: 0.75rem
+
+.account-mark
+  display: grid
+  place-items: center
+  flex: 0 0 auto
+  width: 2.75rem
+  height: 2.75rem
+  padding: 0
+  overflow: hidden
+  border: 1px solid rgba(255, 255, 255, 0.22)
+  border-radius: 0.9rem
+  background: rgba(255, 255, 255, 0.12)
+  img
+    display: block
+    width: 100%
+    height: 100%
+    object-fit: cover
+  &.empty
+    background: transparent
+
+.account-title
+  display: flex
+  flex-direction: column
+  gap: 0.3rem
+  line-height: 1
+  strong
+    color: white
+    white-space: nowrap
+    font-size: 1.12rem
+    font-weight: 600
+    letter-spacing: -0.025em
+  span
+    color: rgba(255, 255, 255, 0.7)
+    font-size: 0.68rem
+    font-weight: 700
+    letter-spacing: 0.08em
+    text-transform: uppercase
+
+.workspace-content
+  position: relative
+  z-index: 1
+  width: min(1240px, calc(100% - 36px))
+  margin: 0 auto
+  padding: 26px 0 50px
 
 #body
   min-height: calc(100vh - 10.5rem)
@@ -106,13 +207,21 @@ Dialog(v-model='verDialog')
   box-shadow: var(--shadow-card)
 
 @media (max-width: 767px)
-  .dashboard-page
-    padding-bottom: 7.2rem
-  .dashboard-hero
+  .header-inner
+    width: calc(100% - 24px)
     min-height: 64px
-    padding: 0.6rem 0.75rem
+    gap: .6rem
+  .header-identities
+    gap: .6rem
+  .identity-separator
+    height: 2rem
   .hero-side
     align-items: flex-end
+  .account-title
+    display: none
+  .workspace-content
+    width: calc(100% - 24px)
+    padding-top: 16px
   .content-card
     padding: 1rem
 </style>

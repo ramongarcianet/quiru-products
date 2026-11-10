@@ -1,9 +1,11 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import OdontogramV2 from './OdontogramV2.vue'
 import { progressFile } from '../../store/storage'
 import { buildTreatmentAppointments, mergeFindingsIntoTreatmentPlan } from '../../domain/clinical/treatmentPlan'
 import { guardarCita } from '../../store/citas'
+import { obtenerTodos as obtenerPrecios, registro as catalogoTratamientos } from '../../store/precios'
 
 const props = defineProps({
   patient: { type: Object, default: () => ({}) },
@@ -14,6 +16,10 @@ const props = defineProps({
   onSave: { type: Function, required: true }
 })
 
+const router = useRouter()
+const { push } = router
+let detenerCatalogo = () => {}
+
 const activeDialog = ref('')
 const feedback = ref('')
 const feedbackIsError = ref(false)
@@ -22,6 +28,18 @@ const attendingPlanIndex = ref(-1)
 const additionalData = reactive({ especificaciones: '', observaciones: '', receta: '', archivos: [] })
 const selectedFiles = ref([])
 const treatmentPlan = ref([])
+const storedFiles = computed(() => Array.isArray(additionalData.archivos) ? additionalData.archivos : [])
+const treatmentOptions = computed(() => catalogoTratamientos.value
+  .filter(treatment => treatment.activo !== false)
+  .map(treatment => ({
+    ...treatment,
+    nombre: treatment.nombre || treatment.tipo || '',
+    precio: Number(treatment.precio || 0),
+  }))
+  .filter(treatment => treatment.nombre))
+
+onMounted(() => { detenerCatalogo = obtenerPrecios() })
+onUnmounted(() => detenerCatalogo?.())
 
 const patientName = computed(() => [props.patient?.nombre, props.patient?.apellidoPaterno, props.patient?.apellidoMaterno].filter(Boolean).join(' ') || 'Paciente sin nombre')
 const documentLabel = computed(() => [props.patient?.tipoDocumento, props.patient?.numeroDocumento].filter(Boolean).join(' ') || 'No registrado')
@@ -104,7 +122,21 @@ function amountRemaining(row) {
 }
 
 function addPlannedTreatment(row) {
+  if (!Array.isArray(row.Tratamiento)) row.Tratamiento = []
   row.Tratamiento.push(newPlannedTreatment())
+}
+
+function applyCatalogTreatment(treatment) {
+  const selectedName = String(treatment.Tratamiento || '').trim().toLocaleLowerCase('es')
+  const selected = treatmentOptions.value.find(option => option.nombre.trim().toLocaleLowerCase('es') === selectedName)
+  if (!selected) return
+  treatment.Tratamiento = selected.nombre
+  treatment.Precio = selected.precio
+  treatment.catalogoId = selected.id
+  treatment.Codigo = selected.codigo || ''
+  treatment.Categoria = selected.categoria || ''
+  treatment.Especialidad = selected.especialidad || ''
+  treatment.DuracionMinutos = Number(selected.duracionMinutos || 0)
 }
 
 function removePlannedTreatment(row, index) {
@@ -150,6 +182,11 @@ function closeDialog() {
   activeDialog.value = ''
   feedback.value = ''
   feedbackIsError.value = false
+}
+
+function goToPatients() {
+  activeDialog.value = ''
+  window.location.assign(router.resolve({ name: 'pacientes' }).href)
 }
 
 function handleFileSelection(event) {
@@ -400,7 +437,7 @@ Teleport(to='body')
 
         .attachments-list
           h3 Adjuntos guardados
-          p(v-if='!additionalData.archivos.length && !selectedFiles.length') No hay archivos adjuntos.
+          p(v-if='!storedFiles.length && !selectedFiles.length') No hay archivos adjuntos.
           table.table.table-hover(v-else)
             thead
               tr
@@ -409,7 +446,7 @@ Teleport(to='body')
                 th
             tbody
               tr(
-                v-for='(file, index) in additionalData.archivos'
+                v-for='(file, index) in storedFiles'
                 :key='file'
               )
                 StorageItem(:storageRef='file')
@@ -443,6 +480,10 @@ Teleport(to='body')
           button.btn.btn-primary(v-if='!readonly' type='button' @click='addPlanRow')
             i.bi.bi-plus-circle.me-2
             | Agregar tratamiento
+        .catalog-notice(v-if='!readonly && !treatmentOptions.length')
+          i.bi.bi-info-circle
+          span Aún no hay tratamientos activos en el catálogo.
+          button.btn.btn-sm.btn-outline-primary(type='button' @click="push({ name: 'tratamientos' })") Registrar tratamientos
         p.empty-plan(v-if='!treatmentPlan.length') No hay diagnósticos para planificar. Agrega un tratamiento para comenzar.
         .plan-list
           article.plan-row(v-for='(row, index) in treatmentPlan' :key='index')
@@ -456,7 +497,20 @@ Teleport(to='body')
               .planned-treatment-row(v-for='(treatment, treatmentIndex) in row.Tratamiento' :key='treatmentIndex')
                 label
                   span Tratamiento
-                  input.form-control(v-model='treatment.Tratamiento' placeholder='Tratamiento propuesto' :disabled='readonly')
+                  input.form-control(
+                    v-model='treatment.Tratamiento'
+                    :list='`ai-treatment-options-${index}-${treatmentIndex}`'
+                    placeholder='Selecciona o escribe un tratamiento'
+                    :disabled='readonly'
+                    @input='applyCatalogTreatment(treatment)'
+                  )
+                  datalist(:id='`ai-treatment-options-${index}-${treatmentIndex}`')
+                    option(
+                      v-for='option in treatmentOptions'
+                      :key='option.id'
+                      :value='option.nombre'
+                      :label='`${option.nombre} · S/ ${option.precio.toFixed(2)}`'
+                    )
                 label
                   span Fecha
                   input.form-control.treatment-date-input(
@@ -513,7 +567,7 @@ Teleport(to='body')
                   placeholder='Comentarios'
                   :disabled='readonly'
                 )
-          p.empty-plan(v-if='!treatmentPlan[attendingPlanIndex].Tratamiento.length') No hay tratamientos agregados para atender.
+          p.empty-plan(v-if='!(treatmentPlan[attendingPlanIndex].Tratamiento || []).length') No hay tratamientos agregados para atender.
         p.empty-plan(v-else) Selecciona un tratamiento válido.
 
       .dialog-body.summary-content(v-else)
@@ -540,10 +594,16 @@ Teleport(to='body')
 
       footer(v-if="activeDialog !== 'summary'")
         span(:class="{ error: feedbackIsError }") {{ feedback }}
+        button.btn.btn-outline-secondary(type='button' @click='goToPatients')
+          i.bi.bi-arrow-left.me-2
+          | Pacientes
         button.btn.btn-secondary(type='button' @click='closeDialog') Cerrar
         button.btn.btn-primary(v-if="activeDialog === 'additional' && !readonly" type='button' :disabled='saving || busy' @click='saveAdditionalData') Guardar datos
         button.btn.btn-primary(v-if="['plan', 'attend'].includes(activeDialog) && !readonly" type='button' :disabled='saving || busy' @click='saveTreatmentPlan') Guardar plan
       footer(v-else)
+        button.btn.btn-outline-secondary(type='button' @click='goToPatients')
+          i.bi.bi-arrow-left.me-2
+          | Pacientes
         button.btn.btn-primary(type='button' @click='printClinicalRecord')
           i.bi.bi-printer.me-2
           | Imprimir ficha
@@ -772,6 +832,19 @@ section.print-sheet(aria-hidden='true')
 .plan-list
   display: grid
   gap: .75rem
+.catalog-notice
+  display: flex
+  align-items: center
+  gap: .6rem
+  margin-bottom: .75rem
+  padding: .7rem .8rem
+  border: 1px solid #cfe2f7
+  border-radius: 10px
+  color: #36516f
+  background: #eef6ff
+  font-size: .78rem
+  button
+    margin-left: auto
 .plan-row
   display: grid
   gap: .75rem
@@ -911,6 +984,11 @@ section.print-sheet(aria-hidden='true')
     grid-template-columns: repeat(2, minmax(0, 1fr))
     > button
       justify-self: end
+  .catalog-notice
+    align-items: flex-start
+    flex-wrap: wrap
+    button
+      margin-left: 0
   .clinical-dialog.wide
     max-height: calc(100vh - 1rem)
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, watch, computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { leerEnRegistro, actualizar, leerOdonto, item } from "../../store/formodontograma";
 import { progressFile } from '../../store/storage.js';
@@ -9,12 +9,14 @@ import vSelect from "vue-select"
 //import { item as itemusuario, actualizar as actualizarUser, leer } from '../../store/usuario'
 import { miUsuario } from '../../store/sesion'
 import { registroParametro, actualizar as actualizarParametro, guardar as GuardarParametro, obtenerTodos, itemParam } from "../../store/parametros";
+import { registro as catalogoTratamientos, obtenerTodos as obtenerPrecios } from '../../store/precios'
 const { push, back } = useRouter();
 const registro = ref([])
 const registroTratamiento = ref([])
 const registroActualizado = ref([]);
 const registroSeleccionado = ref({})
 const mensajePlanificacion = ref('')
+let detenerPrecios = () => {}
 const registroRevertido = computed(() => registro.value.slice().reverse());
 const tratamientosDe = (diagnostico) => Array.isArray(diagnostico?.Tratamiento) ? diagnostico.Tratamiento : []
 const totalTratamientos = (diagnostico, campo) => tratamientosDe(diagnostico)
@@ -166,7 +168,9 @@ function esNumeroGuion($event) {
 onMounted(() => {
   //leer(miUsuario().uid);
   obtenerTodos();
+  detenerPrecios = obtenerPrecios()
 });
+onUnmounted(() => detenerPrecios?.())
 function verDiagnostico(fila) {
   if (!Array.isArray(fila.Tratamiento)) {
     fila.Tratamiento = []
@@ -188,6 +192,35 @@ const _listaTratamientos1 = computed(() => {
   itemParam.value = registroParametro.value[0] || [];
   return itemParam.value?.Tratamientos?.filter((elem) => elem.label != "").map(({ label, value }) => ({ label, value }))
 });
+const opcionesTratamiento = computed(() => {
+  const catalogo = catalogoTratamientos.value
+    .filter(tratamiento => tratamiento.activo !== false)
+    .map(tratamiento => ({
+      id: tratamiento.id,
+      label: tratamiento.nombre || tratamiento.tipo,
+      value: tratamiento.nombre || tratamiento.tipo,
+      precio: Number(tratamiento.precio || 0),
+      codigo: tratamiento.codigo || '',
+      categoria: tratamiento.categoria || '',
+      especialidad: tratamiento.especialidad || '',
+      duracionMinutos: Number(tratamiento.duracionMinutos || 0),
+      requierePieza: tratamiento.requierePieza !== false,
+    }))
+  const nombres = new Set(catalogo.map(tratamiento => String(tratamiento.label).trim().toLocaleLowerCase('es')))
+  const heredados = (_listaTratamientos1.value || []).filter(tratamiento =>
+    !nombres.has(String(tratamiento.label || '').trim().toLocaleLowerCase('es')))
+  return [...catalogo, ...heredados]
+})
+const seleccionarTratamiento = (tratamiento, seleccionado) => {
+  if (!seleccionado || typeof seleccionado !== 'object') return
+  tratamiento.Tratamiento = seleccionado
+  tratamiento.catalogoId = seleccionado.id || ''
+  tratamiento.Codigo = seleccionado.codigo || ''
+  tratamiento.Categoria = seleccionado.categoria || ''
+  tratamiento.Especialidad = seleccionado.especialidad || ''
+  tratamiento.DuracionMinutos = Number(seleccionado.duracionMinutos || 0)
+  if (seleccionado.precio !== undefined) tratamiento.Precio = Number(seleccionado.precio || 0)
+}
 async function crearPT() {
   mensajePlanificacion.value = ''
   try {
@@ -392,7 +425,7 @@ function crearPT2() {
                   .col-8.col-md-2 {{ diagnostico.Diagnostico }}
                   .col-4.d-md-none.mt-2 Tratamiento
                   .col-8.col-md-2
-                    v-select(v-model='tratamiento.Tratamiento' :options='_listaTratamientos1' placeholder='Seleccione/Agregue' taggable)
+                    v-select(v-model='tratamiento.Tratamiento' :options='opcionesTratamiento' placeholder='Seleccione/Agregue' taggable @option:selected='seleccionarTratamiento(tratamiento, $event)')
                   .col-4.d-md-none.mt-2 Fecha
                   .col-8.col-md-2
                     input.form-control(v-model='tratamiento.Fecha' type='datetime-local')

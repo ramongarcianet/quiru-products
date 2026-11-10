@@ -152,7 +152,9 @@ export function detenerVoz() {
         diente: '',
         hallazgos: []
     }
-    annyangInstance.pause();
+    // pause() mantiene vivo el SpeechRecognition interno y puede retener el
+    // micrófono al abrir Atención AI. abort() libera el dispositivo por completo.
+    annyangInstance.abort();
 }
 export function detenerVozAutomat() {
     if (!annyangInstance) return;
@@ -160,7 +162,7 @@ export function detenerVozAutomat() {
     annyangInstance.addCommands(comandosDeVoz.conVozApagada)
     isSpeech.value = false;//stop
     textoEscuchado.value = '';
-    annyangInstance.pause();
+    annyangInstance.abort();
 }
 let synth = window.speechSynthesis;
 
@@ -233,9 +235,31 @@ export function speak(pHablar, options = {}) {
         utterThis.pitch = Number(options.pitch || 1);
         utterThis.rate = Number(options.rate || 1);
         return new Promise(resolve => {
-            utterThis.onend = resolve;
-            utterThis.onerror = resolve;
+            let settled = false;
+            let started = false;
+            let monitor;
+            let safetyTimer;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                clearInterval(monitor);
+                clearTimeout(safetyTimer);
+                resolve();
+            };
+            utterThis.onstart = () => { started = true; };
+            utterThis.onend = finish;
+            utterThis.onerror = finish;
             synth.speak(utterThis);
+
+            // Algunos navegadores reproducen la frase pero no emiten onend.
+            // Detectamos que la cola terminó y liberamos el siguiente turno de escucha.
+            monitor = setInterval(() => {
+                if (started && !synth.speaking && !synth.pending) finish();
+            }, 250);
+            safetyTimer = setTimeout(() => {
+                if (synth.speaking || synth.pending) synth.cancel();
+                finish();
+            }, Math.min(15000, Math.max(3000, pHablar.length * 110)));
         });
 
     }

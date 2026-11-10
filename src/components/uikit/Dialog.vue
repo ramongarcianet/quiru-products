@@ -1,18 +1,35 @@
 <script setup>
-import { onMounted, watch, ref } from "@vue/runtime-core";
+import { onBeforeUnmount, onMounted, watch, ref } from 'vue'
+import Modal from 'bootstrap/js/dist/modal'
+
 const props = defineProps(["modelValue"]);
 const emit = defineEmits(["update:modelValue"]);
 const dialog = ref();
+let modalInstance
+let stopWatching
+
+const handleHidden = () => {
+  if (props.modelValue) emit('update:modelValue', false)
+}
+
 onMounted(() => {
-  const mydialog = new bootstrap.Modal(dialog.value);
-  watch(
+  modalInstance = Modal.getOrCreateInstance(dialog.value)
+  dialog.value.addEventListener('hidden.bs.modal', handleHidden)
+  stopWatching = watch(
     () => props.modelValue,
     () => {
-      if (props.modelValue) mydialog.show();
-      else mydialog.hide();
-    }
-  );
-});
+      if (props.modelValue) modalInstance.show()
+      else modalInstance.hide()
+    },
+    { immediate: true }
+  )
+})
+
+onBeforeUnmount(() => {
+  stopWatching?.()
+  dialog.value?.removeEventListener('hidden.bs.modal', handleHidden)
+  modalInstance?.dispose()
+})
 </script>
 
 <template lang="pug">

@@ -1,7 +1,7 @@
 <script setup>
-import { onUnmounted, onMounted, ref, watch, computed } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { item, actualizar, limpiar, leer, registro, leerEnRegistro } from '../../store/usuario'
+import { item, actualizar, leer, registro, leerEnRegistro } from '../../store/usuario'
 import InputFile from "../../components/FileInput.vue";
 import {progressFile, setFile, borrarFile } from '../../store/storage.js';
 import { cerrarSesion, miUsuario } from '../../store/sesion'
@@ -15,6 +15,7 @@ import prov from '../../config/provincias.json';
 import dist from '../../config/distritos.json';
 */
 const maxDocumento = ref(8);
+const mensajeError = ref('')
 const route = useRoute()
 const { back } = useRouter()
 const usuarioaqui = miUsuario().uid
@@ -31,6 +32,12 @@ const obtenerURLDescarga = async (rutaArchivo) => {
 }
 const guardarOActualizar = async () => {
   try {
+    mensajeError.value = ''
+    const descuentoCumpleanos = Number(item.value.descuentoCumpleanos || 0)
+    if (!Number.isFinite(descuentoCumpleanos) || descuentoCumpleanos < 0 || descuentoCumpleanos > 100) {
+      throw new Error('El descuento por cumpleaños debe estar entre 0 y 100%.')
+    }
+    item.value.descuentoCumpleanos = descuentoCumpleanos
     const keys = Object.keys(item.value);
     for (let key of keys) {
       const isFileList = item.value[key] instanceof FileList;
@@ -59,13 +66,11 @@ const guardarOActualizar = async () => {
     progressFile.value = 0;
   } catch (e) {
     console.error(e);
+    throw e
   }
 }
 onMounted(() => {
   leer(miUsuario().uid);
-});
-onUnmounted(() => {
-  limpiar()
 });
 function definirMaxLimit(tipoDocumento) {
   item.value.numeroDocumento = '';
@@ -167,7 +172,8 @@ const filteredRegistros = computed(() => {
       i.bi.bi-arrow-left.fs-3
   .col-2
 
-Form( :onPromise="() => guardarOActualizar(item)" :onSuccess='() => refresh()')
+Form( :onPromise="() => guardarOActualizar(item)" :onSuccess='() => refresh()' :onCatch='(e) => mensajeError = e?.message || "No se pudo guardar la configuración"')
+  .alert.alert-danger(v-if='mensajeError' role='alert') {{ mensajeError }}
   .row
     .col-12
       label.form-label() Nombre(s) y Apellidos*
@@ -260,6 +266,12 @@ Form( :onPromise="() => guardarOActualizar(item)" :onSuccess='() => refresh()')
       label.form-label() Alias para portal
       .input-group
         input.form-control(placeholder="alias" v-model="item.alias" maxlength="60")
+    .col-12.col-md-6
+      label.form-label() Descuento promocional por cumpleaños (%)
+      .input-group
+        span.input-group-text %
+        input.form-control(v-model.number="item.descuentoCumpleanos" type="number" min="0" max="100" step="1" placeholder="Ej. 15")
+      small.form-text.text-muted Se utilizará en el mensaje de fidelización enviado por WhatsApp.
   .row.mt-2
     .col-6
       label.form-label(v-if="!item.linkPerfil") Foto de perfil

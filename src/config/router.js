@@ -1,5 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { obtenerEstadoDeAutentificacion } from '../store/sesion'
+import { auth } from './firebase'
+import { loadUserAccess } from '../../packages/platform/src/access.js'
+import { canAccessModule } from '../../packages/platform/src/authorization.js'
+import { MODULE_IDS } from '../../packages/platform/src/modules.js'
 const routes = [
     {
       path: '/',
@@ -58,8 +62,13 @@ const routes = [
     {
         path:'/dashboard',
         component: ()=>import('../views/dashboard.vue'),
-        meta: { requiereAuth: true },
+        meta: { requiereAuth: true, module: MODULE_IDS.DENTISTRY },
         children:[
+            {
+                path: '',
+                name: 'reporte',
+                component: ()=>import('../views/Reporte.vue')
+            },
             {
                 path: 'usuarios',
                 name: 'usuarios',
@@ -149,11 +158,22 @@ const routes = [
                 component: ()=>import('../views/10.Citas/citas.vue')
             },
             {
+                path: 'tratamientos',
+                name: 'tratamientos',
+                component: ()=>import('../views/Tratamientos.vue')
+            },
+            {
                 path: 'administracion/:idUsuario?',
                 name: 'admin',
                 component: ()=> import('../views/5.Odontograma/0.Admin.vue'),
             }
         ]
+    },
+    {
+        path: '/sin-acceso',
+        name: 'sin-acceso',
+        component: () => import('../views/SinAcceso.vue'),
+        meta: { requiereAuth: true }
     }
 ]
 
@@ -164,10 +184,38 @@ const router = createRouter({
 })
 
 router.beforeEach( async (to, from, next) => {
+    const requiereAutentificacion = to.matched.some(route => route.meta.requiereAuth)
+    const moduloRequerido = [...to.matched].reverse().find(route => route.meta.module)?.meta.module
+
+    // Las pantallas públicas no necesitan bloquearse esperando la restauración
+    // de Firebase Auth. La suscripción global de sesión redirige después si ya
+    // existe un usuario autenticado.
+    if (!requiereAutentificacion && !moduloRequerido) {
+      next()
+      return
+    }
+
     const hayUsuario = await obtenerEstadoDeAutentificacion()
-    const requiereAutentificacion = to.meta.requiereAuth
-    if ( requiereAutentificacion && !hayUsuario ) next({name: "landing"})
-    else next()
+    if (requiereAutentificacion && !hayUsuario) {
+      next({ name: 'iniciar-sesion' })
+      return
+    }
+
+    if (hayUsuario && moduloRequerido) {
+      try {
+        const access = await loadUserAccess(auth.currentUser.uid)
+        if (!canAccessModule(access, moduloRequerido)) {
+          next({ name: 'sin-acceso' })
+          return
+        }
+      } catch (error) {
+        console.error('No fue posible validar el acceso al módulo', error)
+        next({ name: 'sin-acceso' })
+        return
+      }
+    }
+
+    next()
 })
 
 export default router
