@@ -1,0 +1,10 @@
+{
+  "products": ["AGENDA", "DENT"],
+  "channels": ["PUSH", "EMAIL", "WHATSAPP", "SMS"],
+  "types": ["APPOINTMENT_CREATED", "APPOINTMENT_UPDATED", "APPOINTMENT_CANCELLED", "APPOINTMENT_REMINDER"],
+  "statuses": ["PENDING", "PROCESSING", "SENT", "FAILED", "CANCELLED"],
+  "defaultReminderOffsetsMinutes": [1440, 120, 30],
+  "maxAttempts": 3,
+  "batchSize": 100,
+  "retentionDays": 30
+}

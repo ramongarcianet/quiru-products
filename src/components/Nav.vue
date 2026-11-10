@@ -11,6 +11,7 @@ const rutas = [
     {name:'Pacientes', icono:'bi bi-people', ruta:'pacientes', routes: ['pacientes', 'paciente', 'pacienteVer', 'atencion-ai', 'Detalle', 'Admision']},
     {name:'Tratamientos', icono:'bi bi-journal-medical', ruta:'tratamientos', routes: ['tratamientos', 'plantratamiento']},
     {name:'Configuración', icono:'bi bi-gear', ruta:'usuario', routes: ['usuario']},
+    {name:'Notificaciones', icono:'bi bi-bell', ruta:'notificaciones', routes: ['notificaciones']},
 ]
 const isActive = ruta => ruta.routes.includes(routeName.value)
 </script>

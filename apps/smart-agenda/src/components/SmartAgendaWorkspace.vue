@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import AppointmentBoard from './AppointmentBoard.vue'
 import CatalogManager from './CatalogManager.vue'
+import NotificationSettings from '../../../../packages/platform/src/components/NotificationSettings.vue'
 import {
   archiveCatalogItem,
   createAppointment,
@@ -277,6 +278,11 @@ function formatBirthday(value) {
           <button class="button primary" :disabled="settingsBusy" type="submit">{{ settingsBusy ? 'Guardando…' : 'Guardar configuración' }}</button>
         </form>
       </template>
+
+      <NotificationSettings
+        product="AGENDA"
+        :show-settings="!loading && !error && activeTab === 'settings'"
+      />
     </main>
   </div>
 </template>

@@ -1,0 +1,13 @@
+// Fragmento para fusionar con las reglas Firestore vigentes del proyecto.
+// Las Functions usan Admin SDK y no necesitan acceso desde el cliente.
+match /notificationJobs/{jobId} {
+  allow read, write: if false;
+}
+
+match /usuario/{userId}/notificationTokens/{tokenId} {
+  allow read, write: if false;
+}
+
+match /usuario/{userId}/notificationPreferences/{product} {
+  allow read, write: if false;
+}

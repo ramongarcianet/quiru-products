@@ -149,3 +149,4 @@ exports.updateUserModuleAssignments = onCall(async request => {
 })
 
 Object.assign(exports, require('./serve.js')(assertAdministrator))
+Object.assign(exports, require('./notifications')(db))

@@ -4,6 +4,7 @@ import { computed, ref, watch } from "vue";
 import Nav from "../components/Nav.vue";
 import Avatar from "../components/Avatar.vue";
 import BrandLogo from "../components/BrandLogo.vue";
+import NotificationSettings from "../../packages/platform/src/components/NotificationSettings.vue";
 import { item } from '../store/usuario'
 
 const verDialog = ref(false);
@@ -72,7 +73,8 @@ Dialog(v-model='verDialog')
     .dashboard-shell
       #body
         .content-card
-          router-view(:key="$route.name === 'atencion-ai' ? $route.fullPath : undefined")
+          router-view(v-if="$route.name !== 'notificaciones'" :key="$route.name === 'atencion-ai' ? $route.fullPath : undefined")
+          NotificationSettings(product="DENT" :show-settings="$route.name === 'notificaciones'")
 </template>
 
 <style lang="sass" scoped>

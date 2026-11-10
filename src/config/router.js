@@ -163,6 +163,11 @@ const routes = [
                 component: ()=>import('../views/Tratamientos.vue')
             },
             {
+                path: 'notificaciones',
+                name: 'notificaciones',
+                component: ()=>import('../views/Notificaciones.vue')
+            },
+            {
                 path: 'administracion/:idUsuario?',
                 name: 'admin',
                 component: ()=> import('../views/5.Odontograma/0.Admin.vue'),
